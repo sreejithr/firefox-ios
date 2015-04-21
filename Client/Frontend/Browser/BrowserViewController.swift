@@ -19,7 +19,6 @@ class BrowserViewController: UIViewController {
     private var urlBar: URLBarView!
     private var readerModeBar: ReaderModeBarView!
     private var toolbar: BrowserToolbar?
-    private var tabManager: TabManager!
     private var homePanelController: HomePanelViewController?
     private var searchController: SearchViewController?
     private var webViewContainer: UIView!
@@ -27,6 +26,10 @@ class BrowserViewController: UIViewController {
     private var screenshotHelper: ScreenshotHelper!
     private var homePanelIsInline = false
     private var searchLoader: SearchLoader!
+
+    // This is public because the AppDelegate needs it when showing the settings. This is unfortunate
+    // and we should find a way to better organize that code in the future.
+    var tabManager: TabManager!
 
     let profile: Profile
 
@@ -44,6 +47,14 @@ class BrowserViewController: UIViewController {
 
     required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override func supportedInterfaceOrientations() -> Int {
+        if UIDevice.currentDevice().userInterfaceIdiom == .Phone {
+            return Int(UIInterfaceOrientationMask.AllButUpsideDown.rawValue)
+        } else {
+            return Int(UIInterfaceOrientationMask.All.rawValue)
+        }
     }
 
     private func didInit() {
@@ -129,6 +140,19 @@ class BrowserViewController: UIViewController {
             tabManager.addTab()
         }
         super.viewWillAppear(animated)
+    }
+
+    override func viewDidAppear(animated: Bool) {
+        super.viewDidAppear(animated)
+
+        if UIDevice.currentDevice().userInterfaceIdiom == .Pad {
+            if let introViewController = IntroViewController(profile: profile) {
+                introViewController.delegate = self
+                introViewController.modalPresentationStyle = UIModalPresentationStyle.FormSheet
+                introViewController.preferredContentSize = CGSizeMake(375, 667)
+                presentViewController(introViewController, animated: false, completion: nil)
+            }
+        }
     }
 
     override func updateViewConstraints() {
@@ -1405,5 +1429,21 @@ private class BrowserScreenshotHelper: ScreenshotHelper {
         }
 
         return nil
+    }
+}
+
+extension BrowserViewController: IntroViewControllerDelegate {
+    func introViewControllerDidFinish(introViewController: IntroViewController) {
+        introViewController.dismissViewControllerAnimated(true, completion: nil)
+    }
+
+    func introViewControllerDidRequestToLogin(introViewController: IntroViewController) {
+        introViewController.dismissViewControllerAnimated(true, completion: { () -> Void in
+            // TODO When bug 1161151 has been resolved we can jump directly to the sign in screen
+            let settingsNavigationController = SettingsNavigationController()
+            settingsNavigationController.profile = self.profile
+            settingsNavigationController.tabManager = self.tabManager
+            self.presentViewController(settingsNavigationController, animated: true, completion: nil)
+        })
     }
 }

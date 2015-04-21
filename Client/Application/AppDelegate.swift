@@ -10,6 +10,7 @@ import Shared
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
+    var browserViewController: BrowserViewController!
     var profile: Profile!
 
     private let appVersion = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleShortVersionString") as! String
@@ -35,14 +36,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         self.window = UIWindow(frame: UIScreen.mainScreen().bounds)
         self.window!.backgroundColor = UIColor.whiteColor()
 
-        let controller = BrowserViewController(profile: profile)
+        browserViewController = BrowserViewController(profile: profile)
 
         // Add restoration class, the factory that will return the ViewController we 
         // will restore with.
-        controller.restorationIdentifier = NSStringFromClass(BrowserViewController.self)
-        controller.restorationClass = AppDelegate.self
+        browserViewController.restorationIdentifier = NSStringFromClass(BrowserViewController.self)
+        browserViewController.restorationClass = AppDelegate.self
 
-        self.window!.rootViewController = controller
+        // On iPhone we keep our main controller in a UINavigationController so that we can
+        // more easily maintain a stack of viewcontrollers for the on-boarding. On iPad we
+        // present the on-boarding modally on top of the BVC so we don't need it there.
+        if UIDevice.currentDevice().userInterfaceIdiom == .Phone {
+            let navigationController = RootViewController(rootViewController: browserViewController)
+            navigationController.navigationBarHidden = true
+            if let introViewController = IntroViewController(profile: profile) {
+                introViewController.delegate = self
+                navigationController.pushViewController(introViewController, animated: false)
+            }
+            self.window!.rootViewController = navigationController
+        } else {
+            self.window!.rootViewController = browserViewController
+        }
+
         self.window!.backgroundColor = UIColor(red: 0.21, green: 0.23, blue: 0.25, alpha: 1)
 
 
@@ -229,5 +244,21 @@ extension AppDelegate: UIViewControllerRestoration {
             return appDelegate.window!.rootViewController
         }
         return nil
+    }
+}
+
+extension AppDelegate: IntroViewControllerDelegate {
+    func introViewControllerDidFinish(introViewController: IntroViewController) {
+        introViewController.navigationController?.popToRootViewControllerAnimated(false)
+    }
+
+    func introViewControllerDidRequestToLogin(introViewController: IntroViewController) {
+        // TODO When bug 1161151 has been resolved we can jump directly to the sign in screen
+        let settingsNavigationController = SettingsNavigationController()
+        settingsNavigationController.profile = profile
+        settingsNavigationController.tabManager = browserViewController.tabManager
+        window?.rootViewController?.presentViewController(settingsNavigationController, animated: true, completion: { () -> Void in
+            introViewController.navigationController?.popToRootViewControllerAnimated(false)
+        })
     }
 }
