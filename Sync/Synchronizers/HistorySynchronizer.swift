@@ -144,6 +144,7 @@ public class HistorySynchronizer: BaseSingleCollectionSynchronizer, Synchronizer
         return self.applyIncomingToStorage(storage, records: response.value, fetched: response.metadata.lastModifiedMilliseconds!)
     }
 
+    // TODO: this function should establish a transaction at suitable points.
     func applyIncomingToStorage(storage: SyncableHistory, records: [Record<HistoryPayload>], fetched: Timestamp) -> Success {
         func applyRecord(rec: Record<HistoryPayload>) -> Success {
             let guid = rec.id
