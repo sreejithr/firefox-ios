@@ -64,7 +64,7 @@ class TopSitesPanel: UIViewController, UICollectionViewDelegate, HomePanel {
     }
 
     func collectionView(collectionView: UICollectionView, didSelectItemAtIndexPath indexPath: NSIndexPath) {
-        if let site = dataSource?.data[indexPath.item] as? Site {
+        if let site = dataSource?.data[indexPath.item] {
             homePanelDelegate?.homePanel(self, didSelectURL: NSURL(string: site.url)!)
         }
     }
@@ -197,10 +197,10 @@ private class TopSitesLayout: UICollectionViewLayout {
 }
 
 class TopSitesDataSource: NSObject, UICollectionViewDataSource {
-    var data: Cursor
+    var data: Cursor<Site>
     var profile: Profile
 
-    init(profile: Profile, data: Cursor) {
+    init(profile: Profile, data: Cursor<Site>) {
         self.data = data
         self.profile = profile
     }
@@ -215,7 +215,7 @@ class TopSitesDataSource: NSObject, UICollectionViewDataSource {
     }
     
     func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
-        let site = data[indexPath.item] as! Site
+        let site = data[indexPath.item]!
 
         // Cells for the top site thumbnails.
         if indexPath.item < 6 {
